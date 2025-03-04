@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight sim addon map</title>
+    <link rel="icon" href="img/icon.png">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Gabarito&display=swap');
+        *{margin: 0; padding: 0; box-sizing: border-box; font-family: Gabarito;}
+        body{background-color: black;}
+        #map{
+            width: 100%;
+            min-height: 100vh;
+        }
+        .input-search{
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(23, 23, 23, 0.778);
+            z-index: 998;
+            font-size: 20px;
+            padding: 4px 15px 4px 15px;
+            border: 1px solid rgb(56, 56, 56);
+            border-radius: 1000px;
+            color: rgb(176, 176, 176);
+            width: 500px;
+            backdrop-filter: blur(2px);
+            box-shadow:
+            1.6px 3.1px 19.3px rgba(0, 0, 0, 0.07),
+            2.5px 5px 47.3px rgba(0, 0, 0, 0.05),
+            3.1px 6.2px 85.9px rgba(0, 0, 0, 0.042),
+            3.6px 7.3px 134.2px rgba(0, 0, 0, 0.035),
+            4.6px 9.1px 191.3px rgba(0, 0, 0, 0.028),
+            7px 14px 256px rgba(0, 0, 0, 0.02)
+            ;
+            transition: box-shadow 90ms;
+        }
+        .input-search:focus{
+            outline: 1px solid rgb(42, 107, 31);
+            box-shadow:
+            1.6px 3.1px 19.3px rgba(40, 80, 46, 0.07),
+            2.5px 5px 47.3px rgba(40, 80, 46, 0.07),
+            3.1px 6.2px 85.9px rgba(40, 80, 46, 0.07),
+            3.6px 7.3px 134.2px rgba(40, 80, 46, 0.07),
+            4.6px 9.1px 191.3px rgba(40, 80, 46, 0.07),
+            7px 14px 256px rgba(40, 80, 46, 0.07)
+            ;
+        }
+        .icon-search{
+            position: absolute;
+            top: 22px;
+            left: 50%;
+            transform: translateX(215px);
+            width: 20px;
+            height: 20px;
+            background-image: url(img/icon-search.svg);
+            background-size: cover;
+            z-index: 999;
+            pointer-events: none;
+            transition: 145ms;
+        }
+        .input-search:focus ~ .icon-search{
+            opacity: 0;
+        }
+        .ul-search{
+            position: absolute;
+            top: 65px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 480px;
+            max-height: 80vh;
+            color: rgb(176, 176, 176);
+            background-color: rgba(23, 23, 23, 0.778);
+            backdrop-filter: blur(2px);
+            z-index: 998;
+            display: flex;
+            flex-direction: column;
+            padding: 3px;
+            gap: 3px;
+            list-style: none;
+            overflow-y: scroll;
+            display: none;
+        }
+        .ul-search li{
+            background-color: rgba(128, 128, 128, 0.067);
+            padding: 5px;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip{
+            color: rgb(176, 176, 176);
+            background-color: rgba(23, 23, 23, 0.778);
+            backdrop-filter: blur(2px);
+            border: 1px solid rgb(56, 56, 56);
+        }
+        .config-container{
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            z-index: 999;
+            background-color: rgba(23, 23, 23, 0.778);
+            color: rgb(176, 176, 176);
+            border: 1px solid rgb(56, 56, 56);
+            border-radius: 10px;
+            margin: 15px;
+            padding: 7px 15px 7px 15px;
+            backdrop-filter: blur(2px);
+            box-shadow:
+            1.6px 3.1px 19.3px rgba(0, 0, 0, 0.07),
+            2.5px 5px 47.3px rgba(0, 0, 0, 0.05),
+            3.1px 6.2px 85.9px rgba(0, 0, 0, 0.042),
+            3.6px 7.3px 134.2px rgba(0, 0, 0, 0.035),
+            4.6px 9.1px 191.3px rgba(0, 0, 0, 0.028),
+            7px 14px 256px rgba(0, 0, 0, 0.02)
+            ;
+        }
+
+        .cfg-hdr{
+            display: flex;
+        }
+
+        .cfg-x{
+            margin-left: auto;
+            display: none;
+            opacity: 0;
+            transition: 70ms;
+            filter: brightness(0.8);
+            cursor: pointer;
+        }
+
+        .cfg-x:hover{
+            filter: brightness(0.5);
+        }
+
+        .config-btn-container{
+            display: flex;
+            flex-direction: column;
+            display: none;
+            margin-top: 10px;
+            align-items: flex-start;
+        }
+
+        .hdr-btn-dl{
+            background-color: rgba(0, 0, 255, 0);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0.6rem 0;
+        }
+
+        .buttonsel{
+            background-color: rgb(24, 24, 24);
+            width: 35px;
+            height: 15px;
+            box-shadow: 0 -1px 0 rgb(36, 36, 36);
+            border-radius: 20px;
+            display: flex;
+            flex-shrink: 0;
+            position: relative;
+            transition: 50ms;
+            cursor: pointer;
+        }
+
+        .buttonsel::after{
+            content: '';
+            width: 21px;
+            height: 21px;
+            border-radius: 100px;
+            background-color: rgb(71, 120, 72);
+            position: absolute;
+            top: -4px;
+            left: 0;
+            transition: 50ms;
+            box-shadow: 0 1px 4px 1px rgba(8, 8, 8, 0.341);
+        }
+
+        .toggle-btn:checked + .buttonsel{
+            background-color: #3f5744;
+        }
+
+        .toggle-btn:checked + .buttonsel::after{
+            transform: translateX(14px);
+        }
+
+        .toggle-btn{
+            display: none;
+        }
+        .legend-container{
+            display: flex;
+            gap: 12px;
+            align-self: center;
+            margin: 8px 0 8px 0;
+        }
+        .legend-in-container{
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            color: grey;
+            font-size: 0.9rem;
+        }
+        .legend-in-container > img{
+            width: 14px;
+        }
+        .img-preview-container{
+            display: none;
+            padding: 4px;
+            justify-content: space-between;
+            gap: 4px;
+            overflow-x: scroll;
+        }
+        .img-preview{
+            width: 75px;
+            height: 50px;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <input type="text" class="input-search" placeholder="Search" onkeyup="searchList()" />
+    <div class="icon-search"></div>
+    <ul class="ul-search"></ul>
+    <div class="config-container">
+        <div class="cfg-hdr">
+            <div style="cursor: pointer;">Config and info</div>
+            <div class="cfg-x">&times;</div>
+        </div>
+    
+        <div class="config-btn-container">
+
+            <div class="hdr-btn-dl">
+                <input type="checkbox" id="check1" class="toggle-btn">
+                <label for="check1" class="buttonsel"></label>
+                <span style="margin-left: 0.5rem;">
+                    X-plane
+                </span>
+            </div>
+
+            <div class="hdr-btn-dl">
+                <input type="checkbox" id="check2" class="toggle-btn">
+                <label for="check2" class="buttonsel"></label>
+                <span style="margin-left: 0.5rem;">
+                    Flight simulator
+                </span>
+            </div>
+
+            <div style=" /* separator */
+                width: 100%;
+                height: 1px;
+                background-color: rgb(44, 44, 44);
+                align-self: center;
+                margin: 3px 0 3px 0;
+            "></div>
+
+            <div class="hdr-btn-dl">
+                <input type="checkbox" id="check3" class="toggle-btn">
+                <label for="check3" class="buttonsel"></label>
+                <span style="margin-left: 0.5rem;">
+                    Payware
+                </span>
+            </div>
+
+            <div class="legend-container">
+                <div class="legend-in-container">
+                    <img src="img/legend_xp.png">
+                    <div>XP</div>
+                </div>
+                <div class="legend-in-container">
+                    <img src="img/legend_ms.png">
+                    <div>MS</div>
+                </div>
+                <div class="legend-in-container">
+                    <img src="img/legend_both.png">
+                    <div>Both</div>
+                </div>
+            </div>
+
+            <div style="text-align: center; font-size: 0.9rem;">
+                Flight sim sceneries that has custom <br> 3D objects and ground textures
+            </div>
+
+        </div>
+
+    </div>
+    <script>
+
+        function printl(t) {
+            console.log(t)
+        }
+
+        function limitString(str, maxLength) {
+            return str.length > maxLength ? str.slice(0, maxLength) : str;
+        }
+
+        function getOrSetLocalStorage(key, defaultValue) {
+            let item = localStorage.getItem(key);
+
+            if (item === null) {  
+                localStorage.setItem(key, JSON.stringify(defaultValue));
+                return defaultValue;
+            }
+
+            return JSON.parse(item);
+        }
+
+        var map = L.map('map', {
+            zoomControl: false
+        }).setView([57.5003, -25.41], 5)//.on('click', (e)=>{alert(`clicado ${e.latlng}`)})
+        
+        L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png?api_key={ak}', {
+            maxZoom: 19,
+            minZoom: 3,
+            ak: '65c52c40-8b43-445a-a986-603f24721235',
+            attribution: '&copy; <a href="https://stadiamaps.com/" target="_blank">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
+        }).addTo(map)
+        
+        L.control.zoom({
+            position: 'bottomleft'
+        }).addTo(map)
+
+        var markerIconXp = L.icon({
+            iconUrl: 'img/cmarker_xp.png',
+            shadowUrl: 'img/cmarker_shadow.png',
+            iconSize:     [25, 48], // size of the icon
+            shadowSize:   [48, 46], // size of the shadow
+            iconAnchor:   [12, 47], // point of the icon which will correspond to marker's location
+            shadowAnchor: [5, 38],  // the same for the shadow
+            popupAnchor:  [-0, -50] // point from which the popup should open relative to the iconAnchor
+        })
+
+        var markerIconMs = L.icon(
+            Object.assign({}, markerIconXp.options, {
+                iconUrl: 'img/cmarker_ms.png',
+            })
+        )
+
+        var markerIconBoth = L.icon(
+            Object.assign({}, markerIconXp.options, {
+                iconUrl: 'img/cmarker_both.png',
+            })
+        )
+
+        const sceneries = [
+            {
+                "icao" : "SNCP",
+                "name" : "Planalto Serrano",
+                "continent" : "america",
+                "location" : [-27.6338, -50.35972],
+                "sim" : ["X-Plane"],
+                "links_ms" : [],
+                "links_xp" : [
+                    {
+                        'link' : 'https://axscenery.com/sncp-1-0-planalto-serrano/',
+                        'developer' : 'AxScenery',
+                        'free' : true,
+                        'preview_img' : [
+                            'https://axscenery.com/wp-content/uploads/2024/11/SNCP_5-1.jpg',
+                            'https://axscenery.com/wp-content/uploads/2024/11/SNCP_18-1.jpg',
+                            'https://axscenery.com/wp-content/uploads/2024/11/SNCP_8-1.jpg'
+                        ]
+                    }
+                ]
+            },
+            {
+                "icao" : "SBCF",
+                "name" : "Confins",
+                "continent" : "america",
+                "location" : [-19.62, -43.97194],
+                "sim" : ["X-Plane"],
+                "links_ms" : [],
+                "links_xp" : [
+                    {
+                        'link' : 'https://axscenery.com/sbcf-5-0-confins-2/',
+                        'developer' : 'AxScenery',
+                        'free' : true,
+                        'preview_img' : [
+                            'https://axscenery.com/wp-content/uploads/2022/01/06-27.jpg',
+                            'https://axscenery.com/wp-content/uploads/2022/01/07-27.jpg',
+                            'https://axscenery.com/wp-content/uploads/2022/01/16-23.jpg'
+                        ]
+                    }
+                ]
+            },
+        ]
+
+        // search bar
+        const ul_search = document.querySelector('.ul-search')
+        const input_search = document.querySelector('.input-search')
+        function searchList() {
+            ul_search.innerHTML = ''
+            const sInput = document.querySelector('.input-search').value.toLowerCase()
+            if (sInput == '') {ul_search.style.display = 'none'} else {ul_search.style.display = 'flex'}
+            sceneries.forEach((i)=>{
+                if (i.icao.toLowerCase().includes(sInput) || i.name.toLowerCase().includes(sInput)) {
+                    const el = document.createElement('li')
+                    const txtN = document.createTextNode(`${i.icao} - ${i.name}`)
+                    el.appendChild(txtN)
+                    el.addEventListener('click', ()=>{map.flyTo(i.location, 6); input_search.value=''})
+                    ul_search.appendChild(el)
+                }
+            })
+        }
+        input_search.addEventListener('blur', ()=>  {  setTimeout(()=> {ul_search.style.display='none'}, 120) })
+        input_search.addEventListener('click', ()=>{ if(input_search.value!='') {ul_search.style.display='flex'}})
+
+                                                    // default values if no item in storage
+        var filters = getOrSetLocalStorage("filters", {xplane:true, msfs:false, payware:false})
+
+        var markerGroup = L.layerGroup().addTo(map)
+
+        function addMarkers () {
+            markerGroup.clearLayers()
+            sceneries.forEach( (apt)=> {
+
+                var pContent = `
+                    <h3>${apt.icao}</h3>
+                    <div>${apt.name}</div>
+                `
+
+                // set icon based on sim
+                var mIcon = null
+                if (filters.xplane == true && filters.msfs == true) {
+                    if (apt.sim.includes('X-Plane') && apt.sim.includes('MSFS')) { mIcon = markerIconBoth } else if (apt.sim.includes('MSFS')) { mIcon = markerIconMs } else if (apt.sim.includes('X-Plane')) { mIcon = markerIconXp }
+                } else if (filters.xplane == true) {
+                    mIcon = markerIconXp
+                } else {
+                    mIcon = markerIconMs
+                }
+
+                // add links
+                if (apt.links_xp != 0) {
+
+                    // if filter
+                    if (apt.sim.includes('MSFS') == false && filters.xplane == false) {return}
+
+                    pContent += '<h4>X-Plane:</h4>'
+                    apt.links_xp.forEach( (i)=> {
+                        // limit link length
+                        var linkTxt = i.link
+                        if (linkTxt.length > 30) {
+                            linkTxt = limitString(linkTxt, 30)
+                            linkTxt += '...'
+                        }
+                        // show images if has
+                        if (i.preview_img == 0) {
+                            pContent += `<a href="${i.link}" target="_blank" style="white-space: nowrap">${linkTxt}</a><br>`
+                        } else {
+                            pContent += `<a href="${i.link}" target="_blank" style="white-space: nowrap">${linkTxt}</a>&nbsp;<span style="color: grey; cursor: pointer;" onclick="showpreview(this)">preview↴</span>
+                                        <div class="img-preview-container">
+                                            <img class="img-preview" src="${i.preview_img[0]}">
+                                            <img class="img-preview" src="${i.preview_img[1]}">
+                                            <img class="img-preview" src="${i.preview_img[2]}">
+                                        </div> <br>
+                            `
+                        }
+                    })
+                }
+                if (apt.links_ms != 0) {
+
+                    // if filter
+                    if (apt.sim.includes('X-Plane') == false && filters.msfs == false) {return}
+
+                    pContent += '<h4>MSFS:</h4>'
+                    apt.links_ms.forEach( (i)=> {
+                        // limit link length
+                        var linkTxt = i.link
+                        if (linkTxt.length > 30) {
+                            linkTxt = limitString(linkTxt, 30)
+                            linkTxt += '...'
+                        }
+                        // show images if has
+                        if (i.preview_img == 0) {
+                            pContent += `<a href="${i.link}" target="_blank" style="white-space: nowrap">${linkTxt}</a><br>`
+                        } else {
+                            pContent += `<a href="${i.link}" target="_blank" style="white-space: nowrap">${linkTxt}</a>&nbsp;<span style="color: grey; cursor: pointer;" onclick="showpreview(this)">preview↴</span>
+                                        <div class="img-preview-container">
+                                            <img class="img-preview" src="${i.preview_img[0]}">
+                                            <img class="img-preview" src="${i.preview_img[1]}">
+                                            <img class="img-preview" src="${i.preview_img[2]}">
+                                        </div> <br>
+                            `
+                        }
+                    })
+                }
+
+                L.marker(apt.location, {icon: mIcon}).addTo(markerGroup).bindPopup(pContent)
+            })
+        }
+        addMarkers()
+
+        const configBtnContainer = document.querySelector('.config-btn-container')
+        const cfg_x = document.querySelector('.cfg-x')
+        document.querySelector('.config-container').addEventListener('click', ()=> {
+            configBtnContainer.style.display = 'flex'
+            cfg_x.style.display = 'block'
+            cfg_x.style.opacity = '1'
+        })
+        cfg_x.addEventListener('click', (e)=> {
+            e.stopPropagation()
+            configBtnContainer.style.display = 'none'
+            cfg_x.style.opacity = '0'
+            cfg_x.style.display = 'none'
+        })
+
+        // show preview images
+        function showpreview(el){
+            el.nextElementSibling.style.display = 'flex'
+        }
+
+        var checkbox1 = document.getElementById('check1') // xp
+        var checkbox2 = document.getElementById('check2') // ms
+        var checkbox3 = document.getElementById('check3') // payware
+        checkbox1.checked = filters.xplane
+        checkbox2.checked = filters.msfs
+        checkbox3.checked = filters.payware
+        function filter() {
+            filters.xplane = checkbox1.checked
+            filters.msfs = checkbox2.checked
+            filters.payware = checkbox3.checked
+            localStorage.setItem("filters", JSON.stringify(filters))
+            addMarkers()
+        }
+        document.querySelectorAll('.toggle-btn').forEach((el)=>{
+            el.addEventListener('click', filter)
+        })
+    
+    </script>
+</body>
+</html>
