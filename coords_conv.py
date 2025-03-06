@@ -38,4 +38,4 @@ def skyvector_to_decimal(coord):
     
     return lat_decimal, lon_decimal
 
-print(skyvector_to_decimal('195107S0435702W'))
+print(skyvector_to_decimal('444119N1110706W'))
